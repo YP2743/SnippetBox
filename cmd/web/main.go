@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -14,9 +15,10 @@ import (
 )
 
 type application struct {
-	errorLog *log.Logger
-	infoLog  *log.Logger
-	snippets *models.SnippetModel
+	errorLog      *log.Logger
+	infoLog       *log.Logger
+	snippets      *models.SnippetModel
+	templateCache map[string]*template.Template
 }
 
 // Singleton pattern to make sure that only one connection pool exists.
@@ -63,11 +65,16 @@ func main() {
 	//Close the pool before the main() function exits.
 	defer db.pool.Close()
 
-	// Initialize a new instance of application struct, containing the dependencies.
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
 	app := &application{
-		errorLog: errorLog,
-		infoLog:  infoLog,
-		snippets: &models.SnippetModel{DB: db.pool},
+		errorLog:      errorLog,
+		infoLog:       infoLog,
+		snippets:      &models.SnippetModel{DB: db.pool},
+		templateCache: templateCache,
 	}
 
 	srv := &http.Server{
