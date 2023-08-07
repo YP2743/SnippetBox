@@ -6,18 +6,48 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
-	"github.com/jackc/pgx/v5"
+	"snippetbox.yp2743.me/internal/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
+	snippets *models.SnippetModel
+}
+
+// Singleton pattern to make sure that only one connection pool exists.
+type postgres struct {
+	pool *pgxpool.Pool
+}
+
+var (
+	pgInstance *postgres
+	pgOnce     sync.Once
+)
+
+func openDB(dsn string) (*postgres, error) {
+	var err error
+	pgOnce.Do(func() {
+		var db *pgxpool.Pool
+		db, err = pgxpool.New(context.Background(), dsn)
+		if err == nil {
+			err = db.Ping(context.Background())
+			if err == nil {
+				pgInstance = &postgres{pool: db}
+			}
+		}
+	})
+
+	return pgInstance, err
 }
 
 func main() {
 
-	// flag will be stored in the addr variable at runtime.
+	// Flags will be stored in the variables at runtime.
 	addr := flag.String("addr", ":4000", "HTTP network address")
 	dsn := flag.String("dsn", "postgres://web:abc123@localhost:5432/snippetbox", "PostgreSQL data source name")
 	flag.Parse()
@@ -31,12 +61,13 @@ func main() {
 	}
 
 	//Close the pool before the main() function exits.
-	defer db.Close(context.Background())
+	defer db.pool.Close()
 
 	// Initialize a new instance of application struct, containing the dependencies.
 	app := &application{
 		errorLog: errorLog,
 		infoLog:  infoLog,
+		snippets: &models.SnippetModel{DB: db.pool},
 	}
 
 	srv := &http.Server{
@@ -48,15 +79,4 @@ func main() {
 	infoLog.Printf("Starting server on %s", *addr)
 	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
-}
-
-func openDB(dsn string) (*pgx.Conn, error) {
-	db, err := pgx.Connect(context.Background(), dsn)
-	if err != nil {
-		return nil, err
-	}
-	if err = db.Ping(context.Background()); err != nil {
-		return nil, err
-	}
-	return db, nil
 }
