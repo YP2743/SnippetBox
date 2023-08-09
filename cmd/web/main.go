@@ -16,6 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 type application struct {
@@ -55,9 +56,14 @@ func openDB(dsn string) (*postgres, error) {
 
 func main() {
 
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Flags will be stored in the variables at runtime.
-	addr := flag.String("addr", ":4000", "HTTP network address")
-	dsn := flag.String("dsn", "postgres://web:abc123@localhost:5432/snippetbox", "PostgreSQL data source name")
+	addr := flag.String("addr", os.Getenv("PORT"), "HTTP network address")
+	dsn := flag.String("dsn", os.Getenv("DB_URL"), "PostgreSQL data source name")
 	flag.Parse()
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
