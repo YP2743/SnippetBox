@@ -1,6 +1,6 @@
 module snippetbox.yp2743.me
 
-go 1.20
+go 1.21
 
 require (
 	github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24
