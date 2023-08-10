@@ -2,19 +2,37 @@ package main
 
 import (
 	"bytes"
+	"html"
 	"io"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"snippetbox.yp2743.me/internal/models/mocks"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 )
+
+func extractCSRFToken(t *testing.T, body string) string {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token := doc.Find(`input[type="hidden"][name="csrf_token"]`).AttrOr("value", "")
+
+	if token == "" {
+		t.Fatal("no csrf token found in body")
+	}
+
+	return html.UnescapeString(token)
+}
 
 func newTestApplication(t *testing.T) *application {
 
@@ -32,8 +50,8 @@ func newTestApplication(t *testing.T) *application {
 	return &application{
 		errorLog:       log.New(io.Discard, "", 0),
 		infoLog:        log.New(io.Discard, "", 0),
-		snippets:       &mocks.SnippetModel{}, 
-		users:          &mocks.UserModel{},   
+		snippets:       &mocks.SnippetModel{},
+		users:          &mocks.UserModel{},
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,

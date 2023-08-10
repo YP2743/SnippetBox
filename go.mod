@@ -3,6 +3,7 @@ module snippetbox.yp2743.me
 go 1.21
 
 require (
+	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/alexedwards/scs/pgxstore v0.0.0-20230327161757-10d4299e3b24
 	github.com/alexedwards/scs/v2 v2.5.1
 	github.com/go-playground/form/v4 v4.2.1
@@ -15,9 +16,11 @@ require (
 )
 
 require (
+	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 )
