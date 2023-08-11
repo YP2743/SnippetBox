@@ -21,6 +21,7 @@ import (
 )
 
 type application struct {
+	debug          bool
 	errorLog       *log.Logger
 	infoLog        *log.Logger
 	snippets       models.SnippetModelInterface
@@ -66,6 +67,7 @@ func main() {
 	// Flags will be stored in the variables at runtime.
 	addr := flag.String("addr", os.Getenv("PORT"), "HTTP network address")
 	dsn := flag.String("dsn", os.Getenv("DB_URL"), "PostgreSQL data source name")
+	debug := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -92,6 +94,7 @@ func main() {
 	sessionManager.Cookie.Secure = true
 
 	app := &application{
+		debug:          *debug,
 		errorLog:       errorLog,
 		infoLog:        infoLog,
 		snippets:       &models.SnippetModel{DB: db.pool},
