@@ -42,6 +42,8 @@ func (app *application) routes() http.Handler {
 	// Protected user routes
 	router.Handler(http.MethodGet, "/user/view", protected.ThenFunc(app.userView))
 	router.Handler(http.MethodPost, "/user/logout", protected.ThenFunc(app.userLogoutPost))
+	router.Handler(http.MethodGet, "/user/password/update", protected.ThenFunc(app.userPasswordUpdate))
+	router.Handler(http.MethodPost, "/user/password/update", protected.ThenFunc(app.userPasswordUpdatePost))
 
 	standard := alice.New(app.recoverPanic, app.logRequest, secureHeaders)
 
