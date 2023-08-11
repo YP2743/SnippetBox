@@ -31,6 +31,11 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (app *application) about(w http.ResponseWriter, r *http.Request) {
+	data := app.newTemplateData(r)
+	app.render(w, http.StatusOK, "about.html", data)
+}
+
 //Snippet handlers
 
 func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
