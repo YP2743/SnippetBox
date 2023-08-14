@@ -6,8 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
+	"github.com/alexedwards/argon2id"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,7 +48,7 @@ func (m *UserModel) Get(id int) (*User, error) {
 
 func (m *UserModel) Insert(name, email, password string) error {
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	hashedPassword, err := argon2id.CreateHash(password, argon2id.DefaultParams)
 	if err != nil {
 		return err
 	}
@@ -57,7 +56,7 @@ func (m *UserModel) Insert(name, email, password string) error {
 	stmt := `INSERT INTO users (name, email, hashed_password, created)
 			VALUES($1, $2, $3, CURRENT_TIMESTAMP)`
 
-	_, err = m.DB.Exec(context.Background(), stmt, name, email, string(hashedPassword))
+	_, err = m.DB.Exec(context.Background(), stmt, name, email, hashedPassword)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -73,7 +72,7 @@ func (m *UserModel) Insert(name, email, password string) error {
 func (m *UserModel) Authenticate(email, password string) (int, error) {
 
 	var id int
-	var hashedPassword []byte
+	var hashedPassword string
 
 	stmt := "SELECT id, hashed_password FROM users WHERE email = $1"
 	err := m.DB.QueryRow(context.Background(), stmt, email).Scan(&id, &hashedPassword)
@@ -85,17 +84,14 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 		}
 	}
 
-	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
+	match, err := argon2id.ComparePasswordAndHash(password, hashedPassword)
 	if err != nil {
-		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return 0, ErrInvalidCredentials
-		} else {
-			return 0, err
-		}
+		return 0, err
+	} else if !match {
+		return 0, ErrInvalidCredentials
 	}
 
 	return id, nil
-
 }
 
 func (m *UserModel) Exists(id int) (bool, error) {
@@ -106,25 +102,26 @@ func (m *UserModel) Exists(id int) (bool, error) {
 }
 
 func (m *UserModel) PasswordUpdate(id int, currentPassword, newPassword string) error {
-	var currentHashedPassword []byte
+
+	var currentHashedPassword string
 	stmt := "SELECT hashed_password FROM users WHERE id = $1"
 	err := m.DB.QueryRow(context.Background(), stmt, id).Scan(&currentHashedPassword)
 	if err != nil {
 		return err
 	}
-	err = bcrypt.CompareHashAndPassword(currentHashedPassword, []byte(currentPassword))
+
+	match, err := argon2id.ComparePasswordAndHash(currentPassword, currentHashedPassword)
 	if err != nil {
-		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return ErrInvalidCredentials
-		} else {
-			return err
-		}
+		return err
+	} else if !match {
+		return ErrInvalidCredentials
 	}
-	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+
+	newHashedPassword, err := argon2id.CreateHash(newPassword, argon2id.DefaultParams)
 	if err != nil {
 		return err
 	}
 	stmt = "UPDATE users SET hashed_password = $1 WHERE id = $2"
-	_, err = m.DB.Exec(context.Background(), stmt, string(newHashedPassword), id)
+	_, err = m.DB.Exec(context.Background(), stmt, newHashedPassword, id)
 	return err
 }
